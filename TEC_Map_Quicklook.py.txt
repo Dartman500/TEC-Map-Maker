@@ -1,0 +1,105 @@
+# -*- coding: utf-8 -*-
+"""
+TEC Map over South America with gridding
+"""
+
+import pandas as pd
+import numpy as np
+import glob
+import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
+
+import cartopy.crs as ccrs
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+
+
+# -------------------------------------------------
+# Load TEC files
+# -------------------------------------------------
+
+files = glob.glob(r"D:\DATA\TEC DATA\2018\bele\*.Cmn")
+
+Cmn_header = ["Jdate","Time","PRN","Az","Ele","Lat","Lon","Stec","Vtec"]
+
+dfs = []
+
+for file in files[:5]:
+
+    df = pd.read_csv(
+        file,
+        delimiter="\t",
+        skiprows=5,
+        usecols=np.arange(9),
+        names=Cmn_header
+    )
+
+    df["fulldates"] = pd.to_datetime(df.Jdate, origin="julian", unit="D")
+
+    dfs.append(df)
+
+df = pd.concat(dfs)
+df = df.drop(["Jdate"], axis=1)
+
+
+# -------------------------------------------------
+# Extract coordinates and TEC
+# -------------------------------------------------
+
+lat = df["Lat"].values
+lon = df["Lon"].values
+tec = df["Vtec"].values
+
+
+# -------------------------------------------------
+# Create regular grid
+# -------------------------------------------------
+
+grid_lon = np.linspace(-90, -30, 200)
+grid_lat = np.linspace(-60, 20, 200)
+
+lon_grid, lat_grid = np.meshgrid(grid_lon, grid_lat)
+
+
+# -------------------------------------------------
+# Interpolate TEC onto grid
+# -------------------------------------------------
+
+tec_grid = griddata(
+    (lon, lat),
+    tec,
+    (lon_grid, lat_grid),
+    method="linear"
+)
+
+
+# -------------------------------------------------
+# Plot map
+# -------------------------------------------------
+
+plt.figure(figsize=(18,12))
+
+ax = plt.axes(projection=ccrs.PlateCarree())
+
+ax.set_extent([-90, -30, -60, 20])
+
+grid_lines = ax.gridlines(draw_labels=True)
+grid_lines.xformatter = LONGITUDE_FORMATTER
+grid_lines.yformatter = LATITUDE_FORMATTER
+
+ax.coastlines(linewidth=2)
+
+mesh = ax.pcolormesh(
+    lon_grid,
+    lat_grid,
+    tec_grid,
+    cmap="jet",
+    shading="auto",
+    transform=ccrs.PlateCarree()
+)
+
+cbar = plt.colorbar(mesh, orientation="horizontal", pad=0.05)
+cbar.set_label("TEC (TECU)")
+
+plt.title("TEC Map over South America")
+
+plt.show()
