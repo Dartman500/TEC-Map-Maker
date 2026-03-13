@@ -36,3 +36,30 @@ def grid_tec(df, resolution=0.5):
     )
 
     return lon_grid, lat_grid, tec_grid
+
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+
+def plot_tec_map(lon_grid, lat_grid, tec_grid):
+
+    fig = plt.figure(figsize=(12,8))
+
+    ax = plt.axes(projection=ccrs.PlateCarree())
+
+    mesh = ax.pcolormesh(
+        lon_grid,
+        lat_grid,
+        tec_grid,
+        cmap="jet",
+        shading="auto"
+    )
+
+    ax.coastlines()
+    ax.set_extent([-100, -20, -60, 20])
+
+    cbar = plt.colorbar(mesh, orientation="horizontal", pad=0.05)
+    cbar.set_label("TEC (TECU)")
+
+    plt.title("Total Electron Content over South America")
+
+    plt.show()
